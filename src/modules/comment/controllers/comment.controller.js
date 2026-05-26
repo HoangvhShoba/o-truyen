@@ -1,6 +1,6 @@
 const Comment = require('../models/Comment');
 const Story = require('../../story/models/Story');
-const User = require('../../user/Models/User');
+const User = require('../../user/models/User');
 const Report = require('../../report/models/Report');
 const ApiError = require('../../../common/ApiError');
 const { HTTP_STATUS, COMMENT_STATUS, REPORT_TYPES } = require('../../../common/constants');

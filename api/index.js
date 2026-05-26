@@ -5,14 +5,14 @@ let isConnected = false;
 
 const connectToDatabase = async () => {
   console.log('[DB-1] Checking MongoDB connection...');
-  
+
   if (isConnected && mongoose.connection.readyState === 1) {
     console.log('[DB-2] Using existing MongoDB connection');
     return;
   }
 
   const MONGODB_URI = process.env.MONGODB_URI;
-  
+
   if (!MONGODB_URI) {
     console.error('[DB-ERROR] MONGODB_URI is not defined');
     throw new Error('MONGODB_URI environment variable is required');
@@ -64,7 +64,7 @@ const handler = async (req, res) => {
   try {
     await connectToDatabase();
     console.log('[HANDLER] Processing request...');
-    
+
     await new Promise((resolve, reject) => {
       app(req, res, (err) => {
         if (err) {
@@ -78,7 +78,7 @@ const handler = async (req, res) => {
   } catch (error) {
     console.error('[FATAL-ERROR]', error.message);
     console.error('[STACK]', error.stack);
-    
+
     if (!res.headersSent) {
       res.status(500).json({
         success: false,
