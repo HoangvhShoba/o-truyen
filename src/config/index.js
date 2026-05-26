@@ -21,6 +21,8 @@ module.exports = {
       minPoolSize: 2,
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
+      retryWrites: true,
+      w: 'majority',
     },
   },
 
