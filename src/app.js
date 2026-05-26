@@ -61,10 +61,6 @@ if (!fs.existsSync(uploadsDir)) {
 }
 app.use('/uploads', express.static(uploadsDir));
 
-const logStream = fs.createWriteStream(path.join(__dirname, '..', 'logs', 'access.log'), {
-  flags: 'a',
-});
-app.use(morgan('combined', { stream: logStream }));
 app.use(morgan('dev'));
 
 console.log('[3] Registering routes...');
