@@ -13,6 +13,8 @@ const logger = require('./utils/logger');
 const { errorHandler, notFoundHandler } = require('./middlewares/errorHandler');
 const { globalLimiter } = require('./middlewares/rateLimiter');
 
+console.log('[1] Loading app.js...');
+
 const authRoutes = require('./modules/auth/routes/auth.routes');
 const userRoutes = require('./modules/user/routes/user.routes');
 const storyRoutes = require('./modules/story/routes/story.routes');
@@ -29,6 +31,8 @@ const analyticsRoutes = require('./modules/analytics/routes/analytics.routes');
 const healthRoutes = require('./modules/system/routes/health.routes');
 
 const app = express();
+
+console.log('[2] Setting up middleware...');
 
 app.use(helmet());
 
@@ -49,7 +53,11 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 const uploadsDir = path.join(__dirname, '..', 'uploads');
 if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
+  try {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  } catch (err) {
+    console.warn('[WARN] Could not create uploads directory:', err.message);
+  }
 }
 app.use('/uploads', express.static(uploadsDir));
 
@@ -58,6 +66,8 @@ const logStream = fs.createWriteStream(path.join(__dirname, '..', 'logs', 'acces
 });
 app.use(morgan('combined', { stream: logStream }));
 app.use(morgan('dev'));
+
+console.log('[3] Registering routes...');
 
 app.use('/api/health', healthRoutes);
 
@@ -113,4 +123,66 @@ app.use(notFoundHandler);
 
 app.use(errorHandler);
 
-module.exports = app;
+console.log('[4] App setup complete');
+
+// Vercel serverless export
+if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+  module.exports = app;
+} else {
+  // Local development - use server.js
+  const { connectDatabase, disconnectDatabase } = require('./config/database');
+  
+  const startServer = async () => {
+    try {
+      console.log('[5] Connecting to database...');
+      await connectDatabase();
+      logger.info('Database connected successfully');
+
+      const server = app.listen(config.port, () => {
+        logger.info(`Server running in ${config.env} mode on port ${config.port}`);
+        logger.info(`API Documentation: ${config.baseUrl}${config.swagger.url}`);
+      });
+
+      const gracefulShutdown = async (signal) => {
+        logger.info(`${signal} received. Shutting down gracefully...`);
+
+        server.close(async () => {
+          logger.info('HTTP server closed');
+
+          try {
+            await disconnectDatabase();
+            logger.info('Database disconnected');
+          } catch (error) {
+            logger.error('Error disconnecting database:', error);
+          }
+
+          process.exit(0);
+        });
+
+        setTimeout(() => {
+          logger.error('Could not close connections in time, forcefully shutting down');
+          process.exit(1);
+        }, 10000);
+      };
+
+      process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+      process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+      process.on('unhandledRejection', (reason, promise) => {
+        logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+      });
+
+      process.on('uncaughtException', (error) => {
+        logger.error('Uncaught Exception:', error);
+        process.exit(1);
+      });
+
+    } catch (error) {
+      logger.error('Failed to start server:', error);
+      process.exit(1);
+    }
+  };
+
+  startServer();
+  module.exports = app;
+}
