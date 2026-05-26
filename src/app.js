@@ -131,7 +131,7 @@ if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
 } else {
   // Local development - use server.js
   const { connectDatabase, disconnectDatabase } = require('./config/database');
-  
+
   const startServer = async () => {
     try {
       console.log('[5] Connecting to database...');
