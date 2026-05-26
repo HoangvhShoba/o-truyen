@@ -1,51 +1,14 @@
-const winston = require('winston');
-const path = require('path');
-const fs = require('fs');
-const config = require('../config');
+const createLogger = (level) => {
+  const levels = { error: 0, warn: 1, info: 2, debug: 3 };
 
-const logDir = path.dirname(config.log.file);
-if (!fs.existsSync(logDir)) {
-  fs.mkdirSync(logDir, { recursive: true });
-}
+  return {
+    error: (...args) => levels[level] >= 0 && console.error(...args),
+    warn: (...args) => levels[level] >= 1 && console.warn(...args),
+    info: (...args) => levels[level] >= 2 && console.info(...args),
+    debug: (...args) => levels[level] >= 3 && console.debug(...args),
+  };
+};
 
-const logFormat = winston.format.combine(
-  winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-  winston.format.errors({ stack: true }),
-  winston.format.printf(({ level, message, timestamp, stack, ...meta }) => {
-    let log = `${timestamp} [${level.toUpperCase()}]: ${message}`;
-    if (Object.keys(meta).length > 0) {
-      log += ` ${JSON.stringify(meta)}`;
-    }
-    if (stack) {
-      log += `\n${stack}`;
-    }
-    return log;
-  })
-);
-
-const transports = [
-  new winston.transports.Console({
-    format: winston.format.combine(winston.format.colorize(), logFormat),
-  }),
-  new winston.transports.File({
-    filename: config.log.file,
-    format: logFormat,
-    maxsize: 5242880,
-    maxFiles: 5,
-  }),
-  new winston.transports.File({
-    filename: path.join(logDir, 'error.log'),
-    level: 'error',
-    format: logFormat,
-    maxsize: 5242880,
-    maxFiles: 5,
-  }),
-];
-
-const logger = winston.createLogger({
-  level: config.log.level,
-  transports,
-  exitOnError: false,
-});
+const logger = createLogger(process.env.LOG_LEVEL || 'info');
 
 module.exports = logger;
